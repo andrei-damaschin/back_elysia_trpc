@@ -1,2 +1,2 @@
-import type { AppRouter } from "./index";
+import type { AppRouter } from "./index.ts";
 export type { AppRouter };

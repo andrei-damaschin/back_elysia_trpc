@@ -1,5 +1,5 @@
 import { cors } from "@elysiajs/cors";
-import { trpc } from "@elysiajs/trpc";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { Elysia } from "elysia";
 import mongoose from "mongoose";
 import { auth } from "./lib/auth.ts";
@@ -32,11 +32,14 @@ const app = new Elysia()
 
   .on("start", connectDB) // Connect DB before server starts
 
-  .use(
-    trpc(appRouter, {
+  .all("/trpc/*", ({ request }) => {
+    return fetchRequestHandler({
       endpoint: "/trpc",
-    }),
-  )
+      req: request,
+      router: appRouter,
+      createContext: () => ({}), // Your context
+    });
+  })
   .use(usersRoute)
 
   .get("/", () => "Elysia Main Server Running")
