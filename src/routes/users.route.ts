@@ -1,14 +1,11 @@
 import { Elysia, t } from "elysia";
-import { UserModel } from "../models/user.model";
+import { UserModel } from "../models/user.model.ts";
 
-// 1. Define the Schema (moved from index.ts)
 const UserBodySchema = t.Object({
   username: t.String({ minLength: 3 }),
   email: t.String({ format: "email" }),
 });
 
-// 2. Create an Elysia instance for the Users router
-// We name it and export it as a plugin.
 export const usersRoute = new Elysia({ prefix: "/users" })
   // --- POST /users (Create User) ---
   .post(
@@ -25,7 +22,7 @@ export const usersRoute = new Elysia({ prefix: "/users" })
         const savedUser = await newUser.save();
 
         set.status = 201;
-        // Strip out the MongoDB version key before sending
+
         return savedUser.toObject({ versionKey: false });
       } catch (error) {
         console.error("Error creating user:", error);
@@ -46,11 +43,10 @@ export const usersRoute = new Elysia({ prefix: "/users" })
     },
   )
 
-  // --- GET /users (Fetch All Users) ---
   .get("/", async ({ set }) => {
     try {
       const users = await UserModel.find({});
-      return users; // Elysia converts to JSON
+      return users;
     } catch (error) {
       console.error("Error fetching users:", error);
       set.status = 500;
