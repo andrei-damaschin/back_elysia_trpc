@@ -1,0 +1,21 @@
+{
+  "name": "elysia-back",
+  "version": "1.0.50",
+  "types": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/index.ts"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.0",
+    "@elysiajs/trpc": "^1.1.0",
+    "@trpc/server": "10.45.2",
+    "elysia": "latest",
+    "mongoose": "^9.0.1",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}
