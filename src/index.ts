@@ -1,10 +1,12 @@
-import cors from "@elysiajs/cors";
+import { cors } from "@elysiajs/cors";
 import { trpc } from "@elysiajs/trpc";
 import { Elysia } from "elysia";
 import mongoose from "mongoose";
-import { usersRoute } from "./routes/users.route";
-import { appRouter } from "./trpc"; //
-import type { AppRouter } from "./trpc/index";
+import { auth } from "./lib/auth.ts";
+import { usersRoute } from "./routes/users.route.ts";
+import type { AppRouter } from "./trpc/index.ts";
+import { appRouter } from "./trpc/index.ts";
+
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   throw new Error("MONGODB_URI environment variable is not set");
@@ -27,6 +29,8 @@ const app = new Elysia()
       origin: "http://localhost:3000",
     }),
   )
+  .all("/api/auth/*", ({ request }) => auth.handler(request))
+
   .on("start", connectDB) // Connect DB before server starts
 
   // 1. USE THE PLUGIN: Mount the entire usersRoute here
