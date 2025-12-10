@@ -21,9 +21,9 @@ CREATE TABLE "tags" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"username" text NOT NULL,
 	"email" text NOT NULL,
-	"name" text,
-	"password_hash" text NOT NULL,
+	"password" text NOT NULL,
 	"is_active" boolean DEFAULT true,
 	"role" text DEFAULT 'user',
 	"created_at" timestamp DEFAULT now() NOT NULL,

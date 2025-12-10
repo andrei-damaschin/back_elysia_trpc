@@ -1,69 +1,61 @@
 import { initTRPC } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-// 1. Import Drizzle schemas and operators
-import { users } from "../db/postgres/schema.ts"; // <-- From your schema.ts
-// 2. Import your Context type (defined in previous steps)
 import type { Context } from "../context.ts";
 import { UserModel } from "../db/mongo/models/user.model.ts";
+import { users } from "../db/postgres/schema.ts";
 
-// 3. Initialize tRPC with your Context type
 const t = initTRPC.context<Context>().create();
 
 export const appRouter = t.router({
-  // --- Mongoose Query (Existing) ---
-  userList: t.procedure.query(async () => {
-    const users = await UserModel.find({});
-    return users.map((user) => user.toObject({ versionKey: false }));
-  }),
+  // ... (other procedures like userList, getPostgresUsers)
 
-  // --- Drizzle Query (New) ---
-  getPostgresUsers: t.procedure.query(async ({ ctx }) => {
-    // Uses the Drizzle instance injected into context
-    return await ctx.pg.select().from(users);
-  }),
-
-  // --- Hybrid Mutation (Writes to BOTH) ---
   userCreate: t.procedure
     .input(
       z.object({
-        username: z
-          .string()
-          .min(3, "Username must be at least 3 characters long."),
-        email: z.email("Invalid email format."),
-        // Add password since our Postgres schema likely requires it
-        password: z.string().min(6).optional(),
+        username: z.string().min(3),
+        email: z.string().email(),
+        password: z.string().min(6),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // 1. Check existence (Check Postgres for speed, or Mongo)
-      const existingUser = await UserModel.findOne({ email: input.email });
+      // 1. Check for duplicates (Postgres is usually faster for this)
+      const existingUser = await ctx.pg.query.users.findFirst({
+        where: eq(users.email, input.email),
+      });
+
       if (existingUser) {
         throw new Error("A user with this email already exists.");
       }
 
-      // 2. Create in MongoDB (Your existing logic)
+      // 🔒 2. Hash the password using Bun's native API
+      // Default algorithm is Argon2id (industry standard)
+      const hashedPassword = await Bun.password.hash(input.password);
+
+      // 3. Save to MongoDB (Store the HASH, not the plain text)
       const newMongoUser = new UserModel({
         username: input.username,
         email: input.email,
+        password: hashedPassword, // <--- Saving hash
+        role: "user",
+        isActive: true,
       });
       const savedMongo = await newMongoUser.save();
 
-      // 3. Create in Postgres (Drizzle Logic)
-      // We wrap this in a try/catch in case Mongo succeeds but Postgres fails
-      try {
-        await ctx.pg.insert(users).values({
-          name: input.username,
-          email: input.email,
-          // Assuming you have a password field in Postgres schema
-          passwordHash: "placeholder_hash",
-          role: "user",
-        });
-      } catch (err) {
-        console.error("Failed to sync to Postgres:", err);
-        // Optional: Rollback Mongo here if strict consistency is needed
-      }
+      // 4. Save to Postgres (Store the SAME hash)
+      await ctx.pg.insert(users).values({
+        username: input.username,
+        email: input.email,
+        password: hashedPassword, // <--- Saving hash
+        role: "user",
+        isActive: true,
+      });
 
-      return savedMongo.toObject({ versionKey: false });
+      // 5. Return the user (but delete the password from the response!)
+      const userResponse = savedMongo.toObject({ versionKey: false });
+      delete (userResponse as any).password;
+
+      return userResponse;
     }),
 });
 
