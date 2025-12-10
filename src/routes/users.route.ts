@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { UserModel } from "../models/user.model.ts";
+import { UserModel } from "../db/mongo/models/user.model.ts";
 
 const UserBodySchema = t.Object({
   username: t.String({ minLength: 3 }),
